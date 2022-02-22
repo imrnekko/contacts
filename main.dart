@@ -7,6 +7,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:lazy_load_scrollview/lazy_load_scrollview.dart';
 import 'package:loadmore/loadmore.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:phone_number/phone_number.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:contacts_app/empty.dart';
@@ -22,8 +24,9 @@ import 'package:top_snackbar_flutter/custom_snack_bar.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
 
 import 'model/contacts.dart';
+import 'model/user.dart';
 
-Future<void> main() async {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Firebase.initializeApp();
@@ -34,21 +37,27 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Contacts',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or simply save your changes to "hot reload" in a Flutter IDE).
-        // Notice that the counter didn't reset back to zero; the application
-        // is not restarted.
-        primarySwatch: Colors.blue,
+    return StreamProvider<MyUser?>.value(
+      initialData: null,
+      value: AuthService().user,
+      child: MaterialApp(
+        home: MaterialApp(
+          title: 'Contacts',
+          theme: ThemeData(
+            // This is the theme of your application.
+            //
+            // Try running your application with "flutter run". You'll see the
+            // application has a blue toolbar. Then, without quitting the app, try
+            // changing the primarySwatch below to Colors.green and then invoke
+            // "hot reload" (press "r" in the console where you ran "flutter run",
+            // or simply save your changes to "hot reload" in a Flutter IDE).
+            // Notice that the counter didn't reset back to zero; the application
+            // is not restarted.
+            primarySwatch: Colors.blue,
+          ),
+          home: Contacts(title: 'Contact Lists'),
+        ),
       ),
-      home: Contacts(title: 'Contact Lists'),
     );
   }
 }
@@ -108,43 +117,32 @@ class _ContactsState extends State<Contacts> {
     _refreshController.refreshCompleted();
   }
 
+  AuthService _auth = new AuthService();
+
   void _onLoading() async {
     // monitor network fetch
     await Future.delayed(Duration(milliseconds: 1000));
     // if failed,use loadFailed(),if no data return,use LoadNodata()
-
+    dynamic result = await _auth.SignInAnon();
+    if (result == null) {
+      print("error");
+    } else {
+      print("success");
+    }
     if (mounted) setState(() {});
     _refreshController.loadComplete();
   }
 
   @override
   void initState() {
-    _loadMore();
+    _onLoading();
 
     getTimeFormatData();
     _scrollController.addListener(() {
       if (_scrollController.position.pixels ==
           _scrollController.position.maxScrollExtent) {
         print('You have reached end of the list');
-        /*setState(() {
-          showDialog(
-            context: context,
-            builder: (context) {
-              return AlertDialog(
-                  title: Center(child: Text('End of list')),
-                  // Retrieve the text the that user has entered by using the
-                  // TextEditingController.
-                  content: Text("You have reached end of the list"),
-                  actions: <Widget>[
-                    TextButton(
-                        child: Text('OK'),
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                        }),
-                  ]);
-            },
-          );
-        });*/
+
         showTopSnackBar(
           context,
           CustomSnackBar.info(
